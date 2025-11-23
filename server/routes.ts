@@ -5,6 +5,7 @@ import connectPg from "connect-pg-simple";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import authRoutes from "./auth";
+import { pool } from "./db";
 import { 
   insertProfileSchema, 
   insertSocialLinkSchema, 
@@ -56,37 +57,48 @@ const sessionMiddleware = session({
 
 // Authentication middleware for email/password sessions
 const isAuthenticated = async (req: any, res: any, next: any) => {
-  // Debug logging for production issues
-  if (process.env.NODE_ENV === "production") {
-    console.log("Auth debug:", {
-      hasSession: !!req.session,
-      sessionId: req.session?.id,
-      userId: req.session?.userId,
-      cookies: req.headers.cookie,
-      userAgent: req.headers['user-agent'],
-      host: req.headers.host,
-      origin: req.headers.origin,
-      referer: req.headers.referer
-    });
-  }
-  
   if (!req.session?.userId) {
     return res.status(401).json({ error: "Not authenticated" });
   }
-  
+
   const user = await storage.getUser(req.session.userId);
   if (!user) {
     return res.status(401).json({ error: "User not found" });
   }
-  
+
   req.user = user;
   next();
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for deployment monitoring and load balancers
+  app.get('/health', async (req, res) => {
+    try {
+      // Check database connectivity
+      const client = await pool.connect();
+      await client.query('SELECT 1');
+      client.release();
+
+      res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        database: 'connected',
+      });
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        database: 'disconnected',
+        error: 'Database connection failed',
+      });
+    }
+  });
+
   // Setup session middleware
   app.use(sessionMiddleware);
-  
+
   // Email/password auth routes
   app.use('/api/auth', authRoutes);
 

@@ -34,7 +34,7 @@ export const users = pgTable("users", {
 export const profiles = pgTable("profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  pageName: text("page_name").notNull(), // Unique name for the page (e.g., "personal", "business")
+  pageName: text("page_name").notNull().unique(), // Unique name for the page (e.g., "personal", "business")
   displayName: text("display_name").notNull(),
   bio: text("bio").notNull(),
   profileImageUrl: text("profile_image_url"),
@@ -44,10 +44,8 @@ export const profiles = pgTable("profiles", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  // Unique constraint on userId + pageName combination
+  // Index on userId + pageName combination for efficient queries
   index("IDX_user_page_name").on(table.userId, table.pageName),
-  // Unique constraint on pageName globally (for public URLs)
-  index("IDX_page_name_unique").on(table.pageName),
 ]);
 
 export const socialLinks = pgTable("social_links", {

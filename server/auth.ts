@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { storage } from "./storage";
 import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "./email";
+import { authLimiter, emailLimiter } from "./rateLimiter";
 
 // Extend session type
 declare module "express-session" {
@@ -44,7 +45,7 @@ async function verifyPassword(password: string, hashedPassword: string): Promise
 }
 
 // Register new user with email/password
-router.post("/register", async (req: Request, res: Response) => {
+router.post("/register", authLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password, firstName, lastName } = req.body;
 
@@ -101,7 +102,7 @@ router.post("/register", async (req: Request, res: Response) => {
 });
 
 // Login with email/password
-router.post("/login", async (req: Request, res: Response) => {
+router.post("/login", authLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -132,31 +133,13 @@ router.post("/login", async (req: Request, res: Response) => {
     // Set user session
     if (req.session) {
       req.session.userId = user.id;
-      
-      // Debug logging for production issues
-      if (process.env.NODE_ENV === "production") {
-        console.log("Login debug:", {
-          sessionId: req.session.id,
-          userId: user.id,
-          sessionSecret: !!process.env.SESSION_SECRET,
-          cookieSecure: process.env.NODE_ENV === "production" && process.env.FORCE_HTTPS !== "false"
-        });
-      }
-      
+
       req.session.save((err) => {
         if (err) {
           console.error("Session save error:", err);
           return res.status(500).json({ error: "Failed to create session" });
         }
-        
-        // Set cookie explicitly for debugging
-        if (process.env.NODE_ENV === "production") {
-          console.log("Session saved successfully:", {
-            sessionId: req.session.id,
-            userId: req.session.userId
-          });
-        }
-        
+
         res.json({
           message: "Login successful",
           user: {
@@ -257,7 +240,7 @@ router.get("/verify-email", async (req: Request, res: Response) => {
 });
 
 // Request password reset
-router.post("/forgot-password", async (req: Request, res: Response) => {
+router.post("/forgot-password", emailLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
@@ -294,7 +277,7 @@ router.post("/forgot-password", async (req: Request, res: Response) => {
 });
 
 // Reset password with token
-router.post("/reset-password", async (req: Request, res: Response) => {
+router.post("/reset-password", authLimiter, async (req: Request, res: Response) => {
   try {
     const { token, newPassword } = req.body;
 
@@ -336,7 +319,7 @@ router.post("/reset-password", async (req: Request, res: Response) => {
 });
 
 // Resend verification email
-router.post("/resend-verification", async (req: Request, res: Response) => {
+router.post("/resend-verification", emailLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 
