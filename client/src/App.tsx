@@ -16,6 +16,7 @@ import Analytics from "@/pages/analytics";
 import AdminOverview from "@/pages/admin/overview";
 import AdminUsers from "@/pages/admin/users";
 import AdminProfiles from "@/pages/admin/profiles";
+import AdminSettings from "@/pages/admin/settings";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/admin" component={AdminOverview} />
       <Route path="/admin/users" component={AdminUsers} />
       <Route path="/admin/profiles" component={AdminProfiles} />
+      <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/:username" component={Home} />
       <Route component={NotFound} />
     </Switch>

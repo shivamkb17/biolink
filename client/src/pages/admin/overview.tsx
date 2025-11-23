@@ -1,13 +1,19 @@
 /**
  * Admin Overview Page
- * Dashboard with statistics and insights
+ * Dashboard with statistics, insights, and analytics charts
  */
 
 import { useQuery } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, FileText, Link as LinkIcon, TrendingUp } from "lucide-react";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Users, FileText, Link as LinkIcon, TrendingUp, BarChart3 } from "lucide-react";
 import { useLocation } from "wouter";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 export default function AdminOverview() {
   const [_, setLocation] = useLocation();
@@ -43,6 +49,7 @@ export default function AdminOverview() {
   const stats = data?.stats || {};
   const recentUsers = data?.recentUsers || [];
   const topProfiles = data?.topProfiles || [];
+  const userGrowth = data?.userGrowth || [];
 
   const statCards = [
     {
@@ -74,6 +81,19 @@ export default function AdminOverview() {
       bgColor: "bg-orange-50",
     },
   ];
+
+  // Format dates for chart display
+  const chartData = userGrowth.map((item: any) => ({
+    ...item,
+    date: new Date(item.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+  }));
+
+  const chartConfig = {
+    users: {
+      label: "New Users",
+      color: "hsl(var(--chart-1))",
+    },
+  };
 
   return (
     <AdminLayout>
@@ -108,6 +128,96 @@ export default function AdminOverview() {
               </Card>
             );
           })}
+        </div>
+
+        {/* Analytics Charts */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* User Growth Chart */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-gray-600" />
+                <CardTitle>User Growth (Last 30 Days)</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {chartData.length > 0 ? (
+                <ChartContainer config={chartConfig}>
+                  <AreaChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => value}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => value.toString()}
+                    />
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent indicator="dot" />}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="users"
+                      stroke="var(--color-users)"
+                      fill="var(--color-users)"
+                      fillOpacity={0.2}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-8">
+                  No data available
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Engagement Stats */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-gray-600" />
+                <CardTitle>Engagement Overview</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Profile Views</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {stats.totalProfileViews?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                  <FileText className="h-8 w-8 text-blue-600" />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Link Clicks</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {stats.totalLinkClicks?.toLocaleString() || 0}
+                    </p>
+                  </div>
+                  <LinkIcon className="h-8 w-8 text-purple-600" />
+                </div>
+                {stats.totalProfileViews > 0 && (
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-600">Click-Through Rate</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {((stats.totalLinkClicks / stats.totalProfileViews) * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">

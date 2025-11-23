@@ -10,7 +10,8 @@ import {
   FileText,
   LogOut,
   Menu,
-  X
+  X,
+  Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -27,6 +28,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: "Overview", href: "/admin", icon: LayoutDashboard },
     { name: "Users", href: "/admin/users", icon: Users },
     { name: "Profiles", href: "/admin/profiles", icon: FileText },
+    { name: "Settings", href: "/admin/settings", icon: Settings },
   ];
 
   const handleLogout = async () => {

@@ -1,6 +1,6 @@
 /**
  * Admin Profiles Management Page
- * View and manage all bio profiles
+ * View, search, filter, and manage all bio profiles
  */
 
 import { useState } from "react";
@@ -9,6 +9,14 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,23 +25,78 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ExternalLink, Eye, MousePointerClick, ChevronLeft, ChevronRight } from "lucide-react";
+import { ExternalLink, Eye, MousePointerClick, ChevronLeft, ChevronRight, Search, Download } from "lucide-react";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminProfiles() {
   const [_, setLocation] = useLocation();
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [filterBy, setFilterBy] = useState("all");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+
+  // Build query params
+  const queryParams = new URLSearchParams({
+    page: page.toString(),
+    limit: "20",
+    ...(search && { search }),
+    ...(filterBy !== "all" && { filterBy }),
+    ...(sortBy && { sortBy }),
+    ...(sortOrder && { sortOrder }),
+  });
 
   // Fetch profiles
   const { data, isLoading, error } = useQuery({
-    queryKey: ["/api/admin/profiles", page],
+    queryKey: ["/api/admin/profiles", page, search, filterBy, sortBy, sortOrder],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/profiles?page=${page}&limit=20`);
+      const res = await fetch(`/api/admin/profiles?${queryParams}`);
       if (!res.ok) throw new Error("Failed to fetch");
       return res.json();
     },
     retry: false,
   });
+
+  // Export to CSV
+  const handleExport = async () => {
+    try {
+      const res = await fetch("/api/admin/profiles/export");
+      if (!res.ok) throw new Error("Failed to export");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `profiles-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({
+        title: "Success",
+        description: "Profiles exported successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to export profiles",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle search change - reset to page 1
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  // Handle filter change - reset to page 1
+  const handleFilterChange = (value: string) => {
+    setFilterBy(value);
+    setPage(1);
+  };
 
   // Redirect if unauthorized
   if (error && (error as any)?.status === 401) {
@@ -60,7 +123,58 @@ export default function AdminProfiles() {
               Manage all bio profiles ({pagination.total} total)
             </p>
           </div>
+          <Button onClick={handleExport} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
+
+        {/* Search and Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid gap-4 md:grid-cols-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search profiles..."
+                  value={search}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={filterBy} onValueChange={handleFilterChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Profiles</SelectItem>
+                  <SelectItem value="default">Default Only</SelectItem>
+                  <SelectItem value="secondary">Secondary Only</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="createdAt">Created Date</SelectItem>
+                  <SelectItem value="views">Profile Views</SelectItem>
+                  <SelectItem value="clicks">Link Clicks</SelectItem>
+                  <SelectItem value="pageName">Page Name</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortOrder} onValueChange={setSortOrder}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Order" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="desc">Descending</SelectItem>
+                  <SelectItem value="asc">Ascending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Profiles Table */}
         <Card>

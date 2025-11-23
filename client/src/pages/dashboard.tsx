@@ -13,6 +13,7 @@ import EditProfileModal from "@/components/edit-profile-modal";
 import EditLinkModal from "@/components/edit-link-modal";
 import ThemeBuilderModal from "@/components/theme-builder-modal";
 import BioPagesManager from "@/components/bio-pages-manager";
+import { AdminPanel } from "@/components/admin/AdminPanel";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { type Profile, type SocialLink } from "@shared/schema";
 import { useState } from "react";
@@ -273,6 +274,13 @@ export default function Dashboard() {
               <div className="text-gray-600 text-sm mb-1">Active Links</div>
               <div className="text-2xl font-bold text-charcoal">{data.links.length}</div>
             </div>
+          </div>
+        )}
+
+        {/* Admin Panel - Only show for admin users */}
+        {user?.isAdmin && (
+          <div className="mb-6">
+            <AdminPanel />
           </div>
         )}
 
