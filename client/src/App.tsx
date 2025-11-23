@@ -13,6 +13,9 @@ import VerifyEmail from "@/pages/verify-email";
 import Dashboard from "@/pages/dashboard";
 import Home from "@/pages/home";
 import Analytics from "@/pages/analytics";
+import AdminOverview from "@/pages/admin/overview";
+import AdminUsers from "@/pages/admin/users";
+import AdminProfiles from "@/pages/admin/profiles";
 import NotFound from "@/pages/not-found";
 
 /**
@@ -31,6 +34,9 @@ function Router() {
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/analytics/:profileId" component={Analytics} />
+      <Route path="/admin" component={AdminOverview} />
+      <Route path="/admin/users" component={AdminUsers} />
+      <Route path="/admin/profiles" component={AdminProfiles} />
       <Route path="/:username" component={Home} />
       <Route component={NotFound} />
     </Switch>

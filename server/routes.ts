@@ -5,6 +5,7 @@ import connectPg from "connect-pg-simple";
 import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import authRoutes from "./auth";
+import adminRoutes from "./adminRoutes";
 import { pool } from "./db";
 import { cacheGet, cacheSet, invalidateProfileCache } from "./cache";
 import { 
@@ -102,6 +103,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Email/password auth routes
   app.use('/api/auth', authRoutes);
+
+  // Admin routes (protected)
+  app.use('/api/admin', adminRoutes);
 
   // Get current user (email/password auth)
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
