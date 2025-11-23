@@ -1,37 +1,46 @@
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Link as LinkIcon, Mail, Lock, AlertCircle } from "lucide-react";
+import {
+  Link as LinkIcon,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+} from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
-/**
- * Render the login page and manage user authentication and email verification flows.
- *
- * Handles form submission (email/password), displays success or error toasts, redirects to the dashboard on successful login, and provides a resend-verification action when email verification is required. Also renders alternate third-party authentication and navigation links (forgot password, sign up, back to home).
- *
- * @returns The component's JSX element representing the login page.
- */
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setNeedsVerification(false);
 
     try {
-      const response = await apiRequest("POST", "/api/auth/login", { email, password });
-      
+      const response = await apiRequest("POST", "/api/auth/login", {
+        email,
+        password,
+      });
+
       if (response.ok) {
-        const data = await response.json();
         toast({
           title: "Login successful!",
           description: "Redirecting to your dashboard...",
@@ -41,9 +50,8 @@ export default function Login() {
         }, 500);
       } else {
         const error = await response.json();
-        if (error.needsVerification) {
-          setNeedsVerification(true);
-        }
+        if (error.needsVerification) setNeedsVerification(true);
+
         toast({
           title: "Login failed",
           description: error.error || "Invalid email or password",
@@ -64,12 +72,11 @@ export default function Login() {
   const handleResendVerification = async () => {
     try {
       await apiRequest("POST", "/api/auth/resend-verification", { email });
-
       toast({
         title: "Verification email sent",
         description: "Please check your email inbox.",
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to resend verification email",
@@ -86,15 +93,21 @@ export default function Login() {
           <Link href="/">
             <a className="inline-flex items-center gap-3 mb-2 hover:opacity-80 transition-opacity">
               <LinkIcon className="w-10 h-10 text-primary" />
-              <span className="text-3xl font-display font-bold text-charcoal">LinkBoard</span>
+              <span className="text-3xl font-display font-bold text-charcoal">
+                LinkBoard
+              </span>
             </a>
           </Link>
-          <p className="text-gray-600">Welcome back! Log in to your account.</p>
+          <p className="text-gray-600">
+            Welcome back! Log in to your account.
+          </p>
         </div>
 
         <Card className="shadow-xl border-gray-200">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-display font-bold">Log In</CardTitle>
+            <CardTitle className="text-2xl font-display font-bold">
+              Log In
+            </CardTitle>
             <CardDescription>
               Enter your email and password to access your account
             </CardDescription>
@@ -116,7 +129,6 @@ export default function Login() {
                       variant="link"
                       className="text-amber-700 hover:text-amber-800 p-0 h-auto mt-2"
                       onClick={handleResendVerification}
-                      data-testid="button-resend-verification"
                     >
                       Resend verification email
                     </Button>
@@ -124,6 +136,7 @@ export default function Login() {
                 </div>
               )}
 
+              {/* Email Field */}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
@@ -135,12 +148,12 @@ export default function Login() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="pl-10"
-                    data-testid="input-email"
+                    className="pl-10 placeholder:text-gray-400"
                   />
                 </div>
               </div>
 
+              {/* Password Field with Toggle */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label htmlFor="password">Password</Label>
@@ -154,30 +167,42 @@ export default function Login() {
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pl-10"
-                    data-testid="input-password"
+                    className="pl-10 pr-10 placeholder:text-gray-400"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-500 hover:text-gray-700"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
               </div>
 
+              {/* Login Button */}
               <Button
                 type="submit"
                 className="w-full bg-primary hover:bg-primary-light text-white font-semibold py-3"
                 disabled={isLoading}
-                data-testid="button-login"
               >
                 {isLoading ? "Logging in..." : "Log In"}
               </Button>
             </form>
 
-
             <div className="mt-6 text-center text-sm text-gray-600">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link href="/register">
                 <a className="text-primary hover:text-primary-light font-semibold transition-colors">
                   Sign up
@@ -189,9 +214,7 @@ export default function Login() {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           <Link href="/">
-            <a className="hover:text-gray-700 transition-colors">
-              ← Back to home
-            </a>
+            <a className="hover:text-gray-700 transition-colors">← Back to home</a>
           </Link>
         </div>
       </div>

@@ -3,24 +3,33 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Link as LinkIcon, Mail, Lock, User, CheckCircle2 } from "lucide-react";
+import {
+  Link as LinkIcon,
+  Mail,
+  Lock,
+  User,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
-/**
- * Renders the user registration page and manages the client-side registration flow.
- *
- * Performs client-side validation for matching passwords and minimum length, submits registration data to the server, displays success or error toasts, and conditionally shows a verification confirmation after successful registration.
- *
- * @returns The registration page UI as a JSX element.
- */
 export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
@@ -49,11 +58,11 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      const response = await apiRequest("POST", "/api/auth/register", { 
-        email, 
-        password, 
-        firstName, 
-        lastName 
+      const response = await apiRequest("POST", "/api/auth/register", {
+        email,
+        password,
+        firstName,
+        lastName,
       });
 
       if (response.ok) {
@@ -66,11 +75,12 @@ export default function Register() {
         const error = await response.json();
         toast({
           title: "Registration failed",
-          description: error.error || "An error occurred during registration",
+          description:
+            error.error || "An error occurred during registration",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -94,7 +104,8 @@ export default function Register() {
                 Check your email!
               </h2>
               <p className="text-gray-600 mb-6">
-                We've sent a verification link to <strong>{email}</strong>. Click the link in the email to verify your account and get started.
+                We've sent a verification link to{" "}
+                <strong>{email}</strong>. Click it to verify your account.
               </p>
               <div className="space-y-3">
                 <Link href="/login">
@@ -123,15 +134,21 @@ export default function Register() {
           <Link href="/">
             <a className="inline-flex items-center gap-3 mb-2 hover:opacity-80 transition-opacity">
               <LinkIcon className="w-10 h-10 text-primary" />
-              <span className="text-3xl font-display font-bold text-charcoal">LinkBoard</span>
+              <span className="text-3xl font-display font-bold text-charcoal">
+                LinkBoard
+              </span>
             </a>
           </Link>
-          <p className="text-gray-600">Create your free account to get started.</p>
+          <p className="text-gray-600">
+            Create your free account to get started.
+          </p>
         </div>
 
         <Card className="shadow-xl border-gray-200">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-display font-bold">Create Account</CardTitle>
+            <CardTitle className="text-2xl font-display font-bold">
+              Create Account
+            </CardTitle>
             <CardDescription>
               Sign up to create your personalized link-in-bio page
             </CardDescription>
@@ -149,8 +166,7 @@ export default function Register() {
                       placeholder="John"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="pl-10"
-                      data-testid="input-first-name"
+                      className="pl-10 placeholder:text-gray-400"
                     />
                   </div>
                 </div>
@@ -162,7 +178,7 @@ export default function Register() {
                     placeholder="Doe"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    data-testid="input-last-name"
+                    className="placeholder:text-gray-400"
                   />
                 </div>
               </div>
@@ -178,44 +194,66 @@ export default function Register() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="pl-10"
-                    data-testid="input-email"
+                    className="pl-10 placeholder:text-gray-400"
                   />
                 </div>
               </div>
 
+              {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="pl-10"
-                    data-testid="input-password"
+                    className="pl-10 pr-10 placeholder:text-gray-400"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
-                <p className="text-xs text-gray-500">Must be at least 8 characters</p>
+                <p className="text-xs text-gray-500">
+                  Must be at least 8 characters
+                </p>
               </div>
 
+              {/* Confirm Password */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <Input
                     id="confirmPassword"
-                    type="password"
+                    type={showConfirm ? "text" : "password"}
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="pl-10"
-                    data-testid="input-confirm-password"
+                    className="pl-10 pr-10 placeholder:text-gray-400"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    tabIndex={-1}
+                    aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                    aria-pressed={showConfirm}
+                    title={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                  >
+                    {showConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
               </div>
 
@@ -223,12 +261,10 @@ export default function Register() {
                 type="submit"
                 className="w-full bg-primary hover:bg-primary-light text-white font-semibold py-3"
                 disabled={isLoading}
-                data-testid="button-register"
               >
                 {isLoading ? "Creating account..." : "Create Account"}
               </Button>
             </form>
-
 
             <div className="mt-6 text-center text-sm text-gray-600">
               Already have an account?{" "}
@@ -243,9 +279,7 @@ export default function Register() {
 
         <div className="mt-6 text-center text-sm text-gray-500">
           <Link href="/">
-            <a className="hover:text-gray-700 transition-colors">
-              ← Back to home
-            </a>
+            <a className="hover:text-gray-700 transition-colors">← Back to home</a>
           </Link>
         </div>
       </div>
