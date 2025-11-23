@@ -1,8 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initSentry, setupSentryMiddleware, setupSentryErrorHandler, captureException } from "./sentry";
+import { initRedis } from "./cache";
+
+// Initialize optional services (only if configured)
+initSentry();
+
+// Initialize Redis (async but non-blocking)
+initRedis().catch(err => console.error("Redis initialization error:", err));
 
 const app = express();
+
+// Setup Sentry request tracking (optional)
+setupSentryMiddleware(app);
 
 declare module 'http' {
   interface IncomingMessage {
@@ -49,9 +60,19 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Setup Sentry error handler (must be before other error handlers)
+  setupSentryErrorHandler(app);
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
+
+    // Capture error in Sentry if configured
+    captureException(err, {
+      method: _req.method,
+      path: _req.path,
+      status,
+    });
 
     res.status(status).json({ message });
     throw err;

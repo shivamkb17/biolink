@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import { storage } from "./storage";
 import authRoutes from "./auth";
 import { pool } from "./db";
+import { cacheGet, cacheSet, invalidateProfileCache } from "./cache";
 import { 
   insertProfileSchema, 
   insertSocialLinkSchema, 
@@ -119,18 +120,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/profile/:pageName", async (req, res) => {
     try {
       const { pageName } = req.params;
+
+      // Try to get from cache first (if Redis is enabled)
+      const cacheKey = `profile:pageName:${pageName}`;
+      const cached = await cacheGet<{ profile: any; links: any }>(cacheKey);
+
+      if (cached) {
+        // Still increment views even when serving from cache
+        await storage.incrementProfileViews(cached.profile.id);
+        return res.json(cached);
+      }
+
+      // Cache miss - fetch from database
       const profile = await storage.getProfileByPageName(pageName);
-      
+
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
 
       // Increment profile views
       await storage.incrementProfileViews(profile.id);
-      
+
       const links = await storage.getSocialLinks(profile.id);
-      
-      res.json({ profile, links });
+
+      const responseData = { profile, links };
+
+      // Cache the response (if Redis is enabled)
+      await cacheSet(cacheKey, responseData, 3600); // 1 hour
+
+      res.json(responseData);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -201,6 +219,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const profile = await storage.updateBioPage(id, updates);
+
+      // Invalidate cache for this profile
+      await invalidateProfileCache(id);
+
       res.json(profile);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -358,22 +380,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const { linkIds } = reorderLinksSchema.parse(req.body);
-      
-      // Check ownership of ALL links (not just the first one!)
+
+      // Optimized: Fetch all links in one query instead of N queries
       if (linkIds.length > 0) {
-        for (const linkId of linkIds) {
-          const link = await storage.getSocialLink(linkId);
-          if (!link) {
-            return res.status(404).json({ message: `Link ${linkId} not found` });
-          }
-          
-          const profile = await storage.getProfileById(link.profileId);
+        const links = await storage.getSocialLinksByIds(linkIds);
+
+        // Check if all links exist
+        if (links.length !== linkIds.length) {
+          return res.status(404).json({ message: "One or more links not found" });
+        }
+
+        // Get unique profile IDs from the links
+        const profileIds = [...new Set(links.map(link => link.profileId))];
+
+        // Verify ownership for all profiles (should typically be just one)
+        for (const profileId of profileIds) {
+          const profile = await storage.getProfileById(profileId);
           if (!profile || profile.userId !== userId) {
             return res.status(403).json({ message: "Forbidden: You can only reorder your own links" });
           }
         }
       }
-      
+
       await storage.reorderSocialLinks(linkIds);
       res.status(200).json({ message: "Links reordered successfully" });
     } catch (error) {

@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { storage } from "./storage";
 import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "./email";
 import { authLimiter, emailLimiter } from "./rateLimiter";
+import { validatePasswordStrength, getPasswordRequirements } from "./passwordValidator";
 
 // Extend session type
 declare module "express-session" {
@@ -60,8 +61,13 @@ router.post("/register", authLimiter, async (req: Request, res: Response) => {
     }
 
     // Validate password strength
-    if (password.length < 8) {
-      return res.status(400).json({ error: "Password must be at least 8 characters long" });
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        error: "Password does not meet requirements",
+        details: passwordValidation.errors,
+        requirements: getPasswordRequirements()
+      });
     }
 
     // Check if user already exists
@@ -286,8 +292,13 @@ router.post("/reset-password", authLimiter, async (req: Request, res: Response) 
     }
 
     // Validate password strength
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: "Password must be at least 8 characters long" });
+    const passwordValidation = validatePasswordStrength(newPassword);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        error: "Password does not meet requirements",
+        details: passwordValidation.errors,
+        requirements: getPasswordRequirements()
+      });
     }
 
     // Find user by reset token

@@ -1,6 +1,6 @@
 import { type User, type UpsertUser, type Profile, type SocialLink, type Theme, type InsertProfile, type InsertSocialLink, type UpdateProfile, type UpdateSocialLink, type InsertTheme, type UpdateTheme, type CreateBioPage, type UpdateBioPage, users, profiles, socialLinks, themes } from "@shared/schema";
 import { db } from "./db";
-import { eq, asc, sql, and, ne } from "drizzle-orm";
+import { eq, asc, sql, and, ne, inArray } from "drizzle-orm";
 import { getBestProfileImageUrl } from "./gravatar";
 
 export interface IStorage {
@@ -34,6 +34,7 @@ export interface IStorage {
   // Social links methods
   getSocialLinks(profileId: string): Promise<SocialLink[]>;
   getSocialLink(id: string): Promise<SocialLink | undefined>;
+  getSocialLinksByIds(linkIds: string[]): Promise<SocialLink[]>;
   createSocialLink(link: InsertSocialLink): Promise<SocialLink>;
   updateSocialLink(id: string, updates: Partial<UpdateSocialLink>): Promise<SocialLink | undefined>;
   deleteSocialLink(id: string): Promise<boolean>;
@@ -319,6 +320,16 @@ export class DatabaseStorage implements IStorage {
   async getSocialLink(id: string): Promise<SocialLink | undefined> {
     const [link] = await db.select().from(socialLinks).where(eq(socialLinks.id, id));
     return link || undefined;
+  }
+
+  async getSocialLinksByIds(linkIds: string[]): Promise<SocialLink[]> {
+    if (linkIds.length === 0) {
+      return [];
+    }
+    return await db
+      .select()
+      .from(socialLinks)
+      .where(inArray(socialLinks.id, linkIds));
   }
 
   async createSocialLink(insertLink: InsertSocialLink): Promise<SocialLink> {

@@ -121,6 +121,9 @@
     "vitest": "^4.0.3"
   },
   "optionalDependencies": {
-    "bufferutil": "^4.0.8"
+    "@sentry/node": "^10.26.0",
+    "@sentry/profiling-node": "^10.26.0",
+    "bufferutil": "^4.0.8",
+    "redis": "^5.10.0"
   }
 }
